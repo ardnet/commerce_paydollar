@@ -4,9 +4,10 @@ Author: Pratomo Ardianto
 
 Description
 ===========
-Adds a payment method to Drupal Commerce to accept credit card payments through
-the PayDollar.
-Provides options to select the live or the test PayDollar environment.
+Integrates PayDollar as a payment gateway for Drupal Commerce.
+Provides an options to select between live and dev environment of PayDollar,
+and also provide an option to use 3D Transaction for the payment.
+Currently support 4 currencies, which is USD, SGD, HKD and CNY.
 
 
 Requirements
