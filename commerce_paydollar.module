@@ -117,7 +117,7 @@ function commerce_paydollar_settings_form($settings = NULL) {
     '#type' => 'select',
     '#title' => t('Currency Payment'),
     '#description' => t('Select your currency.'),
-    '#options' => array(344 => 'HKD', 840 => 'USD', 702 => 'SGD', 156 => 'CNY'),
+    '#options' => array(344 => t('HKD'), 840 => t('USD'), 702 => t('SGD'), 156 => t('CNY')),
     '#default_value' => $settings['curr_code'],
   );
   
@@ -125,7 +125,7 @@ function commerce_paydollar_settings_form($settings = NULL) {
     '#type' => 'select',
     '#title' => t('The language of the payment type.'),
     '#description' => t('Select your currency.'),
-    '#options' => array('C' => 'Traditional Chinese', 'E' => 'English', 'X' => 'Simplified Chinese', 'K' => 'Korean', 'J' => 'Japanese', 'T' => 'Thai'),
+    '#options' => array('C' => t('Traditional Chinese'), 'E' => t('English'), 'X' => t('Simplified Chinese'), 'K' => t('Korean'), 'J' => t('Japanese'), 'T' => t('Thai')),
     '#default_value' => $settings['lang'],
   );
   
