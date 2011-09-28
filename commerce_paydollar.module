@@ -37,7 +37,7 @@ function commerce_paydollar_default_settings(){
     'is_secure_hash_setting' => TRUE, //is transaction using Secure Hash?
     'secure_hash_secret' => '', //Secret Hash from PayDollar API.
     'is_3d' => FALSE, //if transaction using 3D Transaction.
-    'transact_mode' => 'T' //Transaction mode (for this module purpose only).
+    'transact_mode' => PAYDOLLAR_TXN_MODE_TEST //Transaction mode (for this module purpose only).
    );
   
 }
