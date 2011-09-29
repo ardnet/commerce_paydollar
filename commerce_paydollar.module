@@ -133,7 +133,23 @@ function commerce_paydollar_settings_form($settings = NULL) {
                     344 => t('HKD'),
                     840 => t('USD'),
                     702 => t('SGD'),
-                    156 => t('CNY')
+                    156 => t('CNY'),
+                    392 => t('JPY'),
+                    901 => t('TWD'),
+                    036 => t('AUD'),
+                    978 => t('EUR'),
+                    826 => t('GPB'),
+                    124 => t('CAD'),
+                    446 => t('MOP'),
+                    608 => t('PHP'),
+                    764 => t('THB'),
+                    458 => t('MYR'),
+                    360 => t('IDR'),
+                    410 => t('KRW'),
+                    682 => t('SAR'),
+                    554 => t('NZD'),
+                    784 => t('AED'),
+                    096 => t('BND')
                   ),
     '#default_value' => $settings['curr_code'],
   );
@@ -165,9 +181,13 @@ function commerce_paydollar_settings_form($settings = NULL) {
     '#default_value' => $settings['3d_trasact_setting']['3d_option']
   );
   $form['3d_trasact_setting']['vbv_transaction'] = array(
-    '#type' => 'textfield',
+    '#type' => 'select',
+    '#options' => array(
+                    'T' => t('True: The transaction has been gone through the VE/PA Process.'),
+                    'F' => t('False: Non-3D transaction without go through the VE/PA Process.'),
+                  ),
     '#title' => t('vbvTransaction'),
-    '#description' => t('3D Transaction (i.e. Verified By VISA, MasterCard SecureCode, J/Secure)'),
+    '#description' => t('3D Transaction (i.e. Verified By VISA, MasterCard SecureCode, J/Secure). *Note: Bank\'s approval is required for non-3D transaction, please contact PayDollar for more details.'),
     '#default_value' => $settings['3d_trasact_setting']['vbv_transaction']
   );
   $form['3d_trasact_setting']['vbvCHReturnCode'] = array(
@@ -185,18 +205,22 @@ function commerce_paydollar_settings_form($settings = NULL) {
   $form['3d_trasact_setting']['vbvTransTime'] = array(
     '#type' => 'textfield',
     '#title' => 'vbvTransTime',
-    '#description' => t('Transaction Time, time, MPI PA Response Message'),
+    '#description' => t('Transaction Time, time, MPI PA Response Message. Format: (YYYYMMDD HH:MM:SS)'),
     '#default_value' => $settings['3d_trasact_setting']['vbvTransTime']
   );
   $form['3d_trasact_setting']['vbvTransAuth'] = array(
     '#type' => 'textfield',
     '#title' => 'vbvTransAuth',
+    '#size' => 28,
+    '#maxlength' => 28,
     '#description' => t('Cardholder Authentication Verification Value, CAVV, value in MPI PA Response Message [ Must be in Base64-Encoded format ]'),
     '#default_value' => $settings['3d_trasact_setting']['vbvTransAuth']
   );
   $form['3d_trasact_setting']['vbvTransECI'] = array(
     '#type' => 'textfield',
     '#title' => 'vbvTransECI',
+    '#size' => 2,
+    '#maxlength' => 2,
     '#description' => t('Electronic Commerce Indicator, ECI, value in MPI PA Response Message'),
     '#default_value' => $settings['3d_trasact_setting']['vbvTransECI']
   );
@@ -209,6 +233,8 @@ function commerce_paydollar_settings_form($settings = NULL) {
   $form['3d_trasact_setting']['vbvXID'] = array(
     '#type' => 'textfield',
     '#title' => 'vbvXID',
+    '#size' => 20,
+    '#maxlength' => 20,
     '#description' => t('Transaction Identifier, xid, in MPI PA Response Message [ Must contain 20 characters ]'),
     '#default_value' => $settings['3d_trasact_setting']['vbvXID']
   );
@@ -227,6 +253,8 @@ function commerce_paydollar_settings_form($settings = NULL) {
   $form['3d_trasact_setting']['vbvTransStatus'] = array(
     '#type' => 'textfield',
     '#title' => 'vbvTransStatus',
+    '#size' => 1,
+    '#maxlength' => 1,
     '#description' => t('Transaction Status, status, in MPI PA Response Message'),
     '#default_value' => $settings['3d_trasact_setting']['vbvTransStatus']
   );
