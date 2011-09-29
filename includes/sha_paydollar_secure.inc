@@ -7,8 +7,8 @@ class SHAPaydollarSecure implements PaydollarSecure {
   }
 
   public function verifyPaymentDatafeed($src, $prc, $successCode, $merchantReferenceNumber, $paydollarReferenceNumber, $currencyCode, $amount, $payerAuthenticationStatus, $secureHashSecret, $secureHash){
-  $buffer = $src.'|'.$prc.'|'.$successCode.'|'. $merchantReferenceNumber.'|'.$paydollarReferenceNumber.'|'.$currencyCode.'|'.$amount.'|'.$payerAuthenticationStatus.'|'.$secureHashSecret;
-  $verifyData = sha1($buffer);
+    $buffer = $src.'|'.$prc.'|'.$successCode.'|'. $merchantReferenceNumber.'|'.$paydollarReferenceNumber.'|'.$currencyCode.'|'.$amount.'|'.$payerAuthenticationStatus.'|'.$secureHashSecret;
+    $verifyData = sha1($buffer);
     if($secureHash == $verifyData){
       return true;
     }
