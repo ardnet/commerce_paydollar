@@ -4,7 +4,7 @@ Author: Pratomo Ardianto
 
 Description
 ===========
-Integrates PayDollar as a payment gateway for Drupal Commerce by using credit card,
+Integrates PayDollar as a payment gateway for Drupal Commerce, Drupal 7, by using credit card,
 which support for VISA, MasterCard, American Express, JCB, and Diners Club.
 Provides an options to select between live and test environment of PayDollar payment,
 and also provide an option to use 3D Transaction for the payment.
