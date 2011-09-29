@@ -24,7 +24,7 @@ Installation
 * Copy the 'commerce_paydollar' module directory in to your Drupal
   sites/all/modules directory as usual.
 
-* Enable the module from the Modules > Commerce PayDollar section
+* Enable the module from the Modules -> Commerce PayDollar section
 
 
 Setup
