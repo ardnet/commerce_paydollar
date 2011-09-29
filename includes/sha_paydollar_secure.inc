@@ -1,4 +1,13 @@
 <?php
+/**
+ * Class to generate secret hash code.
+ *
+ * The code are example code that were get from PayDollar test site (https://test.paydollar.com).
+ * 
+ * How to get the code:
+ * Register and login to the site.
+ * Go to Support -> Developer Corner -> Direct Server Code, download the php code.
+ */
 require_once('paydollar_secure.inc');
 class SHAPaydollarSecure implements PaydollarSecure {
   public function generatePaymentSecureHash($merchantId, $merchantReferenceNumber, $currencyCode, $amount, $paymentType, $secureHashSecret) {
