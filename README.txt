@@ -8,7 +8,6 @@ Integrates PayDollar as a payment gateway for Drupal Commerce (http://drupal.org
 which support for VISA, MasterCard, American Express, JCB, and Diners Club.
 Provides an options to select between live and test environment of PayDollar payment.
 And also provide an option to use 3D Transaction (http://en.wikipedia.org/wiki/3-D_Secure) for the payment.
-Currently support major currencies: HKD, USD, SGD, CNY etc.
 
 
 Requirements

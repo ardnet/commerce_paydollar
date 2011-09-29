@@ -39,7 +39,7 @@ define('PAYDOLLAR_SERVER_TEST', 'https://test.paydollar.com/b2cDemo/eng/directPa
  *   - is_3d: if transaction using 3D Transaction.
  *   - transact_mode: Transaction mode (for this module purpose only).
  */
-function commerce_paydollar_default_settings(){
+function commerce_paydollar_default_settings() {
   return array(
     'order_ref' => '', 
     'amount' => '', 
@@ -66,7 +66,7 @@ function commerce_paydollar_default_settings(){
 /**
  * Define Credit Card type based on PayDollar requirement.
  */
-function commerce_paydollar_cc_type($cc_type){
+function commerce_paydollar_cc_type($cc_type) {
   $cc_kind = array(
     'visa' => 'VISA',
     'mastercard' => 'Master',
@@ -308,7 +308,7 @@ function commerce_paydollar_submit_form_validate($payment_method, $pane_form, $p
  *   A string of additional parameter for POST.
  *   
  */
-function commerce_paydollar_3d_transaction($payment_method){
+function commerce_paydollar_3d_transaction($payment_method) {
   $vbvTransaction = $payment_method['settings']['3d_trasact_setting']['vbv_transaction'];	//3D Transaction (i.e. Verified By VISA, MasterCard SecureCode, J/Secure)
   $vbvCHReturnCode = $payment_method['settings']['3d_trasact_setting']['vbvCHReturnCode']; //Verify Enrollment Return Code
   $vbvPAReturnCode = $payment_method['settings']['3d_trasact_setting']['vbvPAReturnCode']; //Payer Authentication Return Code
@@ -365,13 +365,13 @@ function commerce_paydollar_submit_form_submit($payment_method, $pane_form, $pan
   $post_data = 'lang='.urlencode($lang).'&merchantId='.urlencode($merchant_id).'&orderRef='.urlencode($order_ref).'&currCode='.urlencode($curr_code).'&amount='.urlencode($amount).'&payType='.urlencode($pay_type).'&remark='.urlencode($remark).'&pMethod='.urlencode($p_method).'&cardNo='.urlencode($card_no).'&securityCode='.urlencode($security_code).'&epMonth='.urlencode($ep_month).'&epYear='.urlencode($ep_year).'&cardHolder='.urlencode($card_holder);
 
   //if Secure Hash is used
-  if($default_setting['is_secure_hash_setting']){
+  if($default_setting['is_secure_hash_setting']) {
 	  $post_data .= '&secureHash='.urlencode($secure_hash);
   }    
 
   //if the payment using 3D Transaction, add more parameter.
   $is_3d = $payment_method['settings']['3d_trasact_setting']['3d_option'];
-  if($is_3d == 1){
+  if($is_3d == 1) {
 	  $post_data .= commerce_paydollar_3d_transaction($payment_method);
 	}
   
@@ -381,21 +381,21 @@ function commerce_paydollar_submit_form_submit($payment_method, $pane_form, $pan
   //get the respond message from PayDollar server.
   $result = explode('&', $data);
   $resultArray = array();
-  foreach($result as $key => $value){
+  foreach($result as $key => $value) {
 	  $empArray = explode('=', $value);
 	  $length = count($empArray);
 	
-	  if($length == 2){
+	  if($length == 2) {
 		  $resultArray[$empArray[0]] = $empArray[1];
 	  }
 	
-	  if($length == 1){
+	  if($length == 1) {
 		  $resultArray[$empArray[0]] = '';
 	  }
   }
 
   //if payment fail then redirect back to checkout page.  
-  if($resultArray['successcode'] != '0'){
+  if($resultArray['successcode'] != '0') {
     drupal_set_message(t('Payment is not successful. %message', array('%message' => $resultArray['errMsg'])), 'error');
     watchdog('commerce_paydollar', 'Payment failed: %message', array('%message' => $data), WATCHDOG_WARNING);
     drupal_goto('checkout');
@@ -409,7 +409,7 @@ function commerce_paydollar_submit_form_submit($payment_method, $pane_form, $pan
 /**
  * Define function for POST by using curl.
  */
-function commerce_paydollar_curlpost($url, $curlPost, $timeout = 30){
+function commerce_paydollar_curlpost($url, $curlPost, $timeout = 30) {
   $ssl = substr($url, 0, 8) == "https://" ? TRUE : FALSE;
   $ch = curl_init();
 	
@@ -420,7 +420,7 @@ function commerce_paydollar_curlpost($url, $curlPost, $timeout = 30){
   curl_setopt($ch, CURLOPT_POSTFIELDS, $curlPost);
   curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
  
-  if($ssl){
+  if($ssl) {
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 1);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
   }
