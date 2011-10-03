@@ -10,7 +10,7 @@ Provides an options to select between live and test environment of PayDollar pay
 
 Note:
 Currently is not supported for 3D Transaction yet.
-As I actually need to experience more with this type of payment.
+As I actually need to study and experience more with this type of payment.
 
 
 Requirements
