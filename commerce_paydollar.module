@@ -125,6 +125,21 @@ function commerce_paydollar_settings_form($settings = NULL) {
     '#default_value' => $settings['secure_hash_secret'],
     '#required' => TRUE,
   );
+  
+  $form['lang'] = array(
+    '#type' => 'select',
+    '#title' => t('The language of the payment type.'),
+    '#description' => t('Select your currency.'),
+    '#options' => array(
+      'C' => t('Traditional Chinese'),
+      'E' => t('English'),
+      'X' => t('Simplified Chinese'),
+      'K' => t('Korean'),
+      'J' => t('Japanese'),
+      'T' => t('Thai'),
+    ),
+    '#default_value' => $settings['lang'],
+  );
   $form['curr_code'] = array(
     '#type' => 'select',
     '#title' => t('Currency Payment'),
@@ -154,6 +169,16 @@ function commerce_paydollar_settings_form($settings = NULL) {
     ),
     '#default_value' => $settings['lang'],
   );
+  $form['pay_type'] = array(
+    '#type' => 'select',
+    '#title' => t('Payment Type'),
+    '#description' => t('Select your payment type.'),
+    '#options' => array(
+      'N' => t('Normal Payment (Sales)'),
+      'H' => t('Hold Payment (Authorize only)'),
+    ),
+    '#default_value' => $settings['pay_type'],                          
+  );
   $form['3d_trasact_setting'] = array(
     '#type' => 'fieldset',
     '#title' => t('3D Transaction Setting'), 
@@ -164,36 +189,48 @@ function commerce_paydollar_settings_form($settings = NULL) {
   $form['3d_trasact_setting']['3d_option'] = array(
     '#type' => 'checkbox',
     '#title' => t('Check here if using 3D Transaction.'),
-    '#description' => t('Need to install MPI Server Software at Merchant\'s site'),
+    '#description' => t('Need to install MPI Server Software at Merchant\'s site.'),
     '#default_value' => $settings['3d_trasact_setting']['3d_option'],
   );
   $form['3d_trasact_setting']['vbv_transaction'] = array(
     '#type' => 'select',
     '#options' => array(
-      'T' => t('True: The transaction has been gone through the VE/PA Process.'),
-      'F' => t('False: Non-3D transaction without go through the VE/PA Process.'),
+      'T' => t('The transaction has been gone through the VE/PA Process'),
+      'F' => t('Non-3D transaction without go through the VE/PA Process'),
     ),
     '#title' => t('vbvTransaction'),
     '#description' => t('3D Transaction (i.e. Verified By VISA, MasterCard SecureCode, J/Secure).'),
     '#default_value' => $settings['3d_trasact_setting']['vbv_transaction'],
   );
   $form['3d_trasact_setting']['vbvCHReturnCode'] = array(
-    '#type' => 'textfield',
+    '#type' => 'select',
     '#title' => 'vbvCHReturnCode',
-    '#description' => t('Verify Enrollment Return Code'),
+    '#description' => t('Verify Enrollment Return Code.'),
+    '#options' => array(
+      '0' => t('The enrolled value obtained in MPI VE Response Message is "Y"'),
+      '1001' => t('The enrolled value obtained in MPI VE Response Message is "N"'),
+      '-1' => t('The enrolled value is not available in MPI VE Response Message'),
+    ),
     '#default_value' => $settings['3d_trasact_setting']['vbvCHReturnCode'],
   );
   $form['3d_trasact_setting']['vbvPAReturnCode'] = array(
-    '#type' => 'textfield',
+    '#type' => 'select',
     '#title' => 'vbvPAReturnCode',
-    '#description' => t('Payer Authentication Return Code'),
-    '#default_value' => $settings['3d_trasact_setting']['vbvCHReturnCode'],
+    '#description' => t('Payer Authentication Return Code.'),
+    '#options' => array(
+      '0' => t('The status value obtained in MPI VE Response Message is "Y"'),
+      '1000' => t('The status value obtained in MPI VE Response Message is "A"'),
+      '1003' => t('The status value obtained in MPI VE Response Message is "N"'),
+      '-1' => t('Otherwise.'),
+    ),
+    '#default_value' => $settings['3d_trasact_setting']['vbvPAReturnCode'],
   );
   $form['3d_trasact_setting']['vbvTransTime'] = array(
     '#type' => 'textfield',
     '#title' => 'vbvTransTime',
     '#description' => t('Transaction Time, time, MPI PA Response Message. Format: (YYYYMMDD HH:MM:SS)'),
     '#default_value' => $settings['3d_trasact_setting']['vbvTransTime'],
+    '#element_validate' => array('_commerce_paydollar_settings_form_validate'),
   );
   $form['3d_trasact_setting']['vbvTransAuth'] = array(
     '#type' => 'textfield',
@@ -202,6 +239,7 @@ function commerce_paydollar_settings_form($settings = NULL) {
     '#maxlength' => 28,
     '#description' => t('Cardholder Authentication Verification Value, CAVV, value in MPI PA Response Message [ Must be in Base64-Encoded format ]'),
     '#default_value' => $settings['3d_trasact_setting']['vbvTransAuth'],
+    '#element_validate' => array('_commerce_paydollar_settings_form_validate'),
   );
   $form['3d_trasact_setting']['vbvTransECI'] = array(
     '#type' => 'textfield',
@@ -210,12 +248,14 @@ function commerce_paydollar_settings_form($settings = NULL) {
     '#maxlength' => 2,
     '#description' => t('Electronic Commerce Indicator, ECI, value in MPI PA Response Message'),
     '#default_value' => $settings['3d_trasact_setting']['vbvTransECI'],
+    '#element_validate' => array('_commerce_paydollar_settings_form_validate'),
   );
   $form['3d_trasact_setting']['vbvCAVVAlgo'] = array(
     '#type' => 'textfield',
     '#title' => 'vbvCAVVAlgo',
     '#description' => t('CAVV Algorithm, cavvAlgorithm, in MPI PA Response Message'),
     '#default_value' => $settings['3d_trasact_setting']['vbvCAVVAlgo'],
+    '#element_validate' => array('_commerce_paydollar_settings_form_validate'),
   );
   $form['3d_trasact_setting']['vbvXID'] = array(
     '#type' => 'textfield',
@@ -224,18 +264,21 @@ function commerce_paydollar_settings_form($settings = NULL) {
     '#maxlength' => 20,
     '#description' => t('Transaction Identifier, xid, in MPI PA Response Message [ Must contain 20 characters ]'),
     '#default_value' => $settings['3d_trasact_setting']['vbvXID'],
+    '#element_validate' => array('_commerce_paydollar_settings_form_validate'),
   );
   $form['3d_trasact_setting']['vbvMerchantID'] = array(
     '#type' => 'textfield',
     '#title' => 'vbvMerchantID',
     '#description' => t('Acquirer-defined Merchant Identifier, merID, in MPI PA Response Message'),
     '#default_value' => $settings['3d_trasact_setting']['vbvMerchantID'],
+    '#element_validate' => array('_commerce_paydollar_settings_form_validate'),
   );
   $form['3d_trasact_setting']['vbvAcquirerBin'] = array(
     '#type' => 'textfield',
     '#title' => 'vbvAcquirerBin',
     '#description' => t('Acquirer BIN, acqBIN, in MPI PA Response Message'),
     '#default_value' => $settings['3d_trasact_setting']['vbvAcquirerBin'],
+    '#element_validate' => array('_commerce_paydollar_settings_form_validate'),
   );
   $form['3d_trasact_setting']['vbvTransStatus'] = array(
     '#type' => 'textfield',
@@ -244,8 +287,35 @@ function commerce_paydollar_settings_form($settings = NULL) {
     '#maxlength' => 1,
     '#description' => t('Transaction Status, status, in MPI PA Response Message'),
     '#default_value' => $settings['3d_trasact_setting']['vbvTransStatus'],
+    '#element_validate' => array('_commerce_paydollar_settings_form_validate'),
   );
   return $form;
+}
+
+/**
+ * Validate form settings.
+ */
+function _commerce_paydollar_settings_form_validate($element, &$form_state){
+  if($element['#parents'][6] == 'vbvCHReturnCode'){
+    // form_error($element, t('The "!name" option must contain a valid value. You may either leave the text field empty or enter a string like "512" (bytes), "80 KB" (kilobytes) or "50 MB" (megabytes).', array('!name' => t($element['title']))));
+    form_error($element, t('Hohoxx...'));  
+  }
+  
+  if($element['#parents'][6] == 'vbvPAReturnCode'){
+    form_error($element, t('Hoholl...'));  
+    
+  }
+  
+  
+  
+  //echo '<pre>';
+  //var_dump($element);
+  //echo '</pre>';
+  //echo '<pre>';
+  //var_dump($form_state);
+  //echo '</pre>';
+  //die('hai...');
+  
 }
 
 /**
