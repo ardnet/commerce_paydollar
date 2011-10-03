@@ -2,6 +2,7 @@
 
 /**
  * @file
+ * 
  * Provide a PayDollar API payment method for Drupal Commerce.
  */
 
@@ -9,10 +10,9 @@
 define('PAYDOLLAR_TXN_MODE_LIVE', 'live');
 define('PAYDOLLAR_TXN_MODE_TEST', 'test');
 
-// PayDollar Server URLs for Simulation, Test and Live environments.
+// PayDollar URLs for live and test environments.
 define('PAYDOLLAR_SERVER_LIVE', 'https://www.paydollar.com/b2c2/eng/directPay/payComp.jsp');
 define('PAYDOLLAR_SERVER_TEST', 'https://test.paydollar.com/b2cDemo/eng/directPay/payComp.jsp');
-
 
 /**
  * Specify default settings for PayDollar API.
@@ -59,8 +59,8 @@ function commerce_paydollar_default_settings() {
     'is_secure_hash_setting' => TRUE, 
     'secure_hash_secret' => '', 
     'is_3d' => FALSE, 
-    'transact_mode' => PAYDOLLAR_TXN_MODE_TEST 
-   );
+    'transact_mode' => PAYDOLLAR_TXN_MODE_TEST, 
+  );
 }
 
 /**
@@ -72,7 +72,7 @@ function commerce_paydollar_cc_type($cc_type) {
     'mastercard' => 'Master',
     'amex' => 'AMEX',
     'dc' => 'Diners',
-    'jcb' => 'JCB'
+    'jcb' => 'JCB',
   );
   return $cc_kind[$cc_type];
 }
@@ -121,7 +121,7 @@ function commerce_paydollar_settings_form($settings = NULL) {
   $form['secure_hash_secret'] = array(
     '#type' => 'textfield',
     '#title' => t('Secure hash secret'),
-    '#description' => t('Get the secure hash secret from PayDollar Developer Corner on source code of Direct Client Side for PHP.'),
+    '#description' => t('provided by PayDollar.'),
     '#default_value' => $settings['secure_hash_secret'],
     '#required' => TRUE,
   );
@@ -130,27 +130,14 @@ function commerce_paydollar_settings_form($settings = NULL) {
     '#title' => t('Currency Payment'),
     '#description' => t('Select your currency.'),
     '#options' => array(
-                    344 => t('HKD'),
-                    840 => t('USD'),
-                    702 => t('SGD'),
-                    156 => t('CNY'),
-                    392 => t('JPY'),
-                    901 => t('TWD'),
-                    036 => t('AUD'),
-                    978 => t('EUR'),
-                    826 => t('GPB'),
-                    124 => t('CAD'),
-                    446 => t('MOP'),
-                    608 => t('PHP'),
-                    764 => t('THB'),
-                    458 => t('MYR'),
-                    360 => t('IDR'),
-                    410 => t('KRW'),
-                    682 => t('SAR'),
-                    554 => t('NZD'),
-                    784 => t('AED'),
-                    096 => t('BND')
-                  ),
+      344 => t('HKD'), 840 => t('USD'), 702 => t('SGD'),
+      156 => t('CNY'), 392 => t('JPY'), 901 => t('TWD'),
+      036 => t('AUD'), 978 => t('EUR'), 826 => t('GPB'),
+      124 => t('CAD'), 446 => t('MOP'), 608 => t('PHP'),
+      764 => t('THB'), 458 => t('MYR'), 360 => t('IDR'),
+      410 => t('KRW'), 682 => t('SAR'), 554 => t('NZD'),
+      784 => t('AED'), 096 => t('BND'),
+    ),
     '#default_value' => $settings['curr_code'],
   );
   $form['lang'] = array(
@@ -158,13 +145,13 @@ function commerce_paydollar_settings_form($settings = NULL) {
     '#title' => t('The language of the payment type.'),
     '#description' => t('Select your currency.'),
     '#options' => array(
-                    'C' => t('Traditional Chinese'),
-                    'E' => t('English'),
-                    'X' => t('Simplified Chinese'),
-                    'K' => t('Korean'),
-                    'J' => t('Japanese'),
-                    'T' => t('Thai')
-                  ),
+      'C' => t('Traditional Chinese'),
+      'E' => t('English'),
+      'X' => t('Simplified Chinese'),
+      'K' => t('Korean'),
+      'J' => t('Japanese'),
+      'T' => t('Thai'),
+    ),
     '#default_value' => $settings['lang'],
   );
   $form['3d_trasact_setting'] = array(
@@ -178,35 +165,35 @@ function commerce_paydollar_settings_form($settings = NULL) {
     '#type' => 'checkbox',
     '#title' => t('Check here if using 3D Transaction.'),
     '#description' => t('Need to install MPI Server Software at Merchant\'s site'),
-    '#default_value' => $settings['3d_trasact_setting']['3d_option']
+    '#default_value' => $settings['3d_trasact_setting']['3d_option'],
   );
   $form['3d_trasact_setting']['vbv_transaction'] = array(
     '#type' => 'select',
     '#options' => array(
-                    'T' => t('True: The transaction has been gone through the VE/PA Process.'),
-                    'F' => t('False: Non-3D transaction without go through the VE/PA Process.'),
-                  ),
+      'T' => t('True: The transaction has been gone through the VE/PA Process.'),
+      'F' => t('False: Non-3D transaction without go through the VE/PA Process.'),
+    ),
     '#title' => t('vbvTransaction'),
-    '#description' => t('3D Transaction (i.e. Verified By VISA, MasterCard SecureCode, J/Secure). *Note: Bank\'s approval is required for non-3D transaction, please contact PayDollar for more details.'),
-    '#default_value' => $settings['3d_trasact_setting']['vbv_transaction']
+    '#description' => t('3D Transaction (i.e. Verified By VISA, MasterCard SecureCode, J/Secure).'),
+    '#default_value' => $settings['3d_trasact_setting']['vbv_transaction'],
   );
   $form['3d_trasact_setting']['vbvCHReturnCode'] = array(
     '#type' => 'textfield',
     '#title' => 'vbvCHReturnCode',
     '#description' => t('Verify Enrollment Return Code'),
-    '#default_value' => $settings['3d_trasact_setting']['vbvCHReturnCode']
+    '#default_value' => $settings['3d_trasact_setting']['vbvCHReturnCode'],
   );
   $form['3d_trasact_setting']['vbvPAReturnCode'] = array(
     '#type' => 'textfield',
     '#title' => 'vbvPAReturnCode',
     '#description' => t('Payer Authentication Return Code'),
-    '#default_value' => $settings['3d_trasact_setting']['vbvCHReturnCode']
+    '#default_value' => $settings['3d_trasact_setting']['vbvCHReturnCode'],
   );
   $form['3d_trasact_setting']['vbvTransTime'] = array(
     '#type' => 'textfield',
     '#title' => 'vbvTransTime',
     '#description' => t('Transaction Time, time, MPI PA Response Message. Format: (YYYYMMDD HH:MM:SS)'),
-    '#default_value' => $settings['3d_trasact_setting']['vbvTransTime']
+    '#default_value' => $settings['3d_trasact_setting']['vbvTransTime'],
   );
   $form['3d_trasact_setting']['vbvTransAuth'] = array(
     '#type' => 'textfield',
@@ -214,7 +201,7 @@ function commerce_paydollar_settings_form($settings = NULL) {
     '#size' => 28,
     '#maxlength' => 28,
     '#description' => t('Cardholder Authentication Verification Value, CAVV, value in MPI PA Response Message [ Must be in Base64-Encoded format ]'),
-    '#default_value' => $settings['3d_trasact_setting']['vbvTransAuth']
+    '#default_value' => $settings['3d_trasact_setting']['vbvTransAuth'],
   );
   $form['3d_trasact_setting']['vbvTransECI'] = array(
     '#type' => 'textfield',
@@ -222,13 +209,13 @@ function commerce_paydollar_settings_form($settings = NULL) {
     '#size' => 2,
     '#maxlength' => 2,
     '#description' => t('Electronic Commerce Indicator, ECI, value in MPI PA Response Message'),
-    '#default_value' => $settings['3d_trasact_setting']['vbvTransECI']
+    '#default_value' => $settings['3d_trasact_setting']['vbvTransECI'],
   );
   $form['3d_trasact_setting']['vbvCAVVAlgo'] = array(
     '#type' => 'textfield',
     '#title' => 'vbvCAVVAlgo',
     '#description' => t('CAVV Algorithm, cavvAlgorithm, in MPI PA Response Message'),
-    '#default_value' => $settings['3d_trasact_setting']['vbvCAVVAlgo']
+    '#default_value' => $settings['3d_trasact_setting']['vbvCAVVAlgo'],
   );
   $form['3d_trasact_setting']['vbvXID'] = array(
     '#type' => 'textfield',
@@ -236,19 +223,19 @@ function commerce_paydollar_settings_form($settings = NULL) {
     '#size' => 20,
     '#maxlength' => 20,
     '#description' => t('Transaction Identifier, xid, in MPI PA Response Message [ Must contain 20 characters ]'),
-    '#default_value' => $settings['3d_trasact_setting']['vbvXID']
+    '#default_value' => $settings['3d_trasact_setting']['vbvXID'],
   );
   $form['3d_trasact_setting']['vbvMerchantID'] = array(
     '#type' => 'textfield',
     '#title' => 'vbvMerchantID',
     '#description' => t('Acquirer-defined Merchant Identifier, merID, in MPI PA Response Message'),
-    '#default_value' => $settings['3d_trasact_setting']['vbvMerchantID']
+    '#default_value' => $settings['3d_trasact_setting']['vbvMerchantID'],
   );
   $form['3d_trasact_setting']['vbvAcquirerBin'] = array(
     '#type' => 'textfield',
     '#title' => 'vbvAcquirerBin',
     '#description' => t('Acquirer BIN, acqBIN, in MPI PA Response Message'),
-    '#default_value' => $settings['3d_trasact_setting']['vbvAcquirerBin']
+    '#default_value' => $settings['3d_trasact_setting']['vbvAcquirerBin'],
   );
   $form['3d_trasact_setting']['vbvTransStatus'] = array(
     '#type' => 'textfield',
@@ -256,9 +243,27 @@ function commerce_paydollar_settings_form($settings = NULL) {
     '#size' => 1,
     '#maxlength' => 1,
     '#description' => t('Transaction Status, status, in MPI PA Response Message'),
-    '#default_value' => $settings['3d_trasact_setting']['vbvTransStatus']
+    '#default_value' => $settings['3d_trasact_setting']['vbvTransStatus'],
   );
   return $form;
+}
+
+/**
+ *
+ */
+function commerce_paydollar_settings_form_validate($form, &$form_state) {
+  // die('afaf');
+  
+}
+
+function commerce_paydollar_form_alter(&$form, &$form_state, $form_id) {
+  $form['#validate'] = '_fsfsd';
+  
+}
+
+function _fsfsd(){
+  
+  die('fdsfs');
 }
 
 /**
@@ -272,11 +277,11 @@ function commerce_paydollar_submit_form($payment_method, $pane_values, $checkout
       'mastercard',
       'amex',
       'jcb',
-      'dc'
+      'dc',
     ),
     'number' => '',
     'code' => '',
-    'owner' => ''
+    'owner' => '',
   );
   return commerce_payment_credit_card_form($credit_card_settings);
 }
@@ -286,12 +291,11 @@ function commerce_paydollar_submit_form($payment_method, $pane_values, $checkout
  */
 function commerce_paydollar_submit_form_validate($payment_method, $pane_form, $pane_values, $order, $form_parents = array()) {
   module_load_include('inc', 'commerce_payment', 'includes/commerce_payment.credit_card');
-  
   // Validate the credit card fields.
   $settings = array(
     'form_parents' => array_merge($form_parents, array('credit_card')),
   );
-
+  
   if (!commerce_payment_credit_card_validate($pane_values['credit_card'], $settings)) {
     return FALSE;
   }
@@ -309,33 +313,36 @@ function commerce_paydollar_submit_form_validate($payment_method, $pane_form, $p
  *   
  */
 function commerce_paydollar_3d_transaction($payment_method) {
-  $vbvTransaction = $payment_method['settings']['3d_trasact_setting']['vbv_transaction'];	//3D Transaction (i.e. Verified By VISA, MasterCard SecureCode, J/Secure)
-  $vbvCHReturnCode = $payment_method['settings']['3d_trasact_setting']['vbvCHReturnCode']; //Verify Enrollment Return Code
-  $vbvPAReturnCode = $payment_method['settings']['3d_trasact_setting']['vbvPAReturnCode']; //Payer Authentication Return Code
-  $vbvTransTime = $payment_method['settings']['3d_trasact_setting']['vbvTransTime']; //Transaction Time, time, MPI PA Response Message
-  $vbvTransAuth = $payment_method['settings']['3d_trasact_setting']['vbvTransAuth']; //Cardholder Authentication Verification Value, CAVV, value in MPI PA Response Message [ Must be in Base64-Encoded format ]
-  $vbvTransECI = $payment_method['settings']['3d_trasact_setting']['vbvTransECI']; //Electronic Commerce Indicator, ECI, value in MPI PA Response Message
-  $vbvCAVVAlgo = $payment_method['settings']['3d_trasact_setting']['vbvCAVVAlgo']; //CAVV Algorithm, cavvAlgorithm, in MPI PA Response Message
-  $vbvXID = $payment_method['settings']['3d_trasact_setting']['vbvXID']; //Transaction Identifier, xid, in MPI PA Response Message [ Must contain 20 characters ]
-  $vbvMerchantID = $payment_method['settings']['3d_trasact_setting']['vbvMerchantID']; //Acquirer-defined Merchant Identifier, merID, in MPI PA Response Message
-  $vbvAcquirerBin = $payment_method['settings']['3d_trasact_setting']['vbvAcquirerBin']; //Acquirer BIN, acqBIN, in MPI PA Response Message
-  $vbvTransStatus = $payment_method['settings']['3d_trasact_setting']['vbvTransStatus']; //Transaction Status, status, in MPI PA Response Message
+  $vbvTransaction = $payment_method['settings']['3d_trasact_setting']['vbv_transaction'];
+  $vbvCHReturnCode = $payment_method['settings']['3d_trasact_setting']['vbvCHReturnCode'];
+  $vbvPAReturnCode = $payment_method['settings']['3d_trasact_setting']['vbvPAReturnCode'];
+  $vbvTransTime = $payment_method['settings']['3d_trasact_setting']['vbvTransTime']; 
+  $vbvTransAuth = $payment_method['settings']['3d_trasact_setting']['vbvTransAuth']; 
+  $vbvTransECI = $payment_method['settings']['3d_trasact_setting']['vbvTransECI']; 
+  $vbvCAVVAlgo = $payment_method['settings']['3d_trasact_setting']['vbvCAVVAlgo']; 
+  $vbvXID = $payment_method['settings']['3d_trasact_setting']['vbvXID']; 
+  $vbvMerchantID = $payment_method['settings']['3d_trasact_setting']['vbvMerchantID']; 
+  $vbvAcquirerBin = $payment_method['settings']['3d_trasact_setting']['vbvAcquirerBin']; 
+  $vbvTransStatus = $payment_method['settings']['3d_trasact_setting']['vbvTransStatus']; 
   
-  $post_data = '&vbvTransaction='.urlencode($vbvTransaction).'&vbvCHReturnCode='.urlencode($vbvCHReturnCode).'&vbvPAReturnCode='.urlencode($vbvPAReturnCode).'&vbvTransTime='.urlencode($vbvTransTime).'&vbvTransAuth='.urlencode($vbvTransAuth).'&vbvTransECI='.urlencode($vbvTransECI).'&vbvCAVVAlgo='.urlencode($vbvCAVVAlgo).'&vbvXID='.urlencode($vbvXID).'&vbvMerchantID='.urlencode($vbvMerchantID).'&vbvAcquirerBin='.urlencode($vbvAcquirerBin).'&vbvTransStatus='.urlencode($vbvTransStatus);
+  $post_data = '&vbvTransaction=' . urlencode($vbvTransaction) . '&vbvCHReturnCode=' . urlencode($vbvCHReturnCode);
+  $post_data .= '&vbvPAReturnCode=' . urlencode($vbvPAReturnCode) . '&vbvTransTime=' . urlencode($vbvTransTime);
+  $post_data .= '&vbvTransAuth=' . urlencode($vbvTransAuth) . '&vbvTransECI=' . urlencode($vbvTransECI);
+  $post_data .= '&vbvCAVVAlgo=' . urlencode($vbvCAVVAlgo) . '&vbvXID=' . urlencode($vbvXID);
+  $post_data .= '&vbvMerchantID=' . urlencode($vbvMerchantID) . '&vbvAcquirerBin=' . urlencode($vbvAcquirerBin);
+  $post_data .= '&vbvTransStatus=' . urlencode($vbvTransStatus);
     
   watchdog('commerce_paydollar', 'Payment is using 3D Trasaction. Data that were sent: %message', array('%message' => $post_data));
   return $post_data;  
-  
 }
 
 /**
  * Payment method callback: submit form submission.
  */
 function commerce_paydollar_submit_form_submit($payment_method, $pane_form, $pane_values, $order, $charge) {
-  //include PayDollar library.
   module_load_include('inc', 'commerce_paydollar', 'includes/sha_paydollar_secure');
   
-  //grab some settings from default setting.
+  // grab some settings from default setting.
   $default_setting = commerce_paydollar_default_settings();
   
   $order_ref = $order->order_id; 
@@ -354,56 +361,57 @@ function commerce_paydollar_submit_form_submit($payment_method, $pane_form, $pan
   $ori_country = $default_setting['ori_country']; 
   $dest_country = $default_setting['dest_country']; 
   
+  // Generate the secure hash.
   $secure_hash_secret = $payment_method['settings']['secure_hash_secret']; 
   $paydollar_secure = new SHAPaydollarSecure(); 
-  //Secure hash is used to authenticate the integrity of the transaction information and the identity of the merchant.
-  //It is calculated by hashing the combination of various transaction parameters and the Secure Hash Secret.
   $secure_hash = $paydollar_secure->generatePaymentSecureHash($merchant_id, $order_ref, $curr_code, $amount, $pay_type, $secure_hash_secret);
   $server_url = ($payment_method['settings']['transact_mode'] == PAYDOLLAR_TXN_MODE_LIVE) ? PAYDOLLAR_SERVER_LIVE : PAYDOLLAR_SERVER_TEST;
 
-  //Generate data POST for form submission.
-  $post_data = 'lang='.urlencode($lang).'&merchantId='.urlencode($merchant_id).'&orderRef='.urlencode($order_ref).'&currCode='.urlencode($curr_code).'&amount='.urlencode($amount).'&payType='.urlencode($pay_type).'&remark='.urlencode($remark).'&pMethod='.urlencode($p_method).'&cardNo='.urlencode($card_no).'&securityCode='.urlencode($security_code).'&epMonth='.urlencode($ep_month).'&epYear='.urlencode($ep_year).'&cardHolder='.urlencode($card_holder);
+  // Generate data POST for form submission.
+  $post_data = 'lang=' . urlencode($lang) . '&merchantId=' . urlencode($merchant_id);
+  $post_data .= '&orderRef=' . urlencode($order_ref) . '&currCode=' . urlencode($curr_code);
+  $post_data .= '&amount=' . urlencode($amount) . '&payType=' . urlencode($pay_type);
+  $post_data .= '&remark=' . urlencode($remark) . '&pMethod=' . urlencode($p_method);
+  $post_data .= '&cardNo=' . urlencode($card_no) . '&securityCode=' . urlencode($security_code);
+  $post_data .= '&epMonth=' . urlencode($ep_month) . '&epYear=' . urlencode($ep_year);
+  $post_data .= '&cardHolder=' . urlencode($card_holder);
 
-  //if Secure Hash is used
-  if($default_setting['is_secure_hash_setting']) {
-	  $post_data .= '&secureHash='.urlencode($secure_hash);
+  // if Secure Hash is used
+  if ($default_setting['is_secure_hash_setting']) {
+    $post_data .= '&secureHash=' . urlencode($secure_hash);
   }    
 
-  //if the payment using 3D Transaction, add more parameter.
+  // if the payment using 3D Transaction, add more parameter.
   $is_3d = $payment_method['settings']['3d_trasact_setting']['3d_option'];
-  if($is_3d == 1) {
-	  $post_data .= commerce_paydollar_3d_transaction($payment_method);
-	}
-  
-  //post data to Paydollar System,and get the result
-  $data = commerce_paydollar_curlpost($server_url, $post_data);
-
-  //get the respond message from PayDollar server.
-  $result = explode('&', $data);
-  $resultArray = array();
-  foreach($result as $key => $value) {
-	  $empArray = explode('=', $value);
-	  $length = count($empArray);
-	
-	  if($length == 2) {
-		  $resultArray[$empArray[0]] = $empArray[1];
-	  }
-	
-	  if($length == 1) {
-		  $resultArray[$empArray[0]] = '';
-	  }
+  if ($is_3d == 1) {
+    $post_data .= commerce_paydollar_3d_transaction($payment_method);
   }
-
-  //if payment fail then redirect back to checkout page.  
-  if($resultArray['successcode'] != '0') {
-    drupal_set_message(t('Payment is not successful. %message', array('%message' => $resultArray['errMsg'])), 'error');
+  
+  // post data to Paydollar System,and get the result
+  $data = commerce_paydollar_curlpost($server_url, $post_data);
+  // get the respond message from PayDollar server.
+  $result = explode('&', $data);
+  $result_array = array();
+  foreach ($result as $key => $value) {
+    $emp_array = explode('=', $value);
+    $length = count($emp_array);
+    if ($length == 2) {
+      $result_array[$emp_array[0]] = $emp_array[1];
+    }
+    if ($length == 1) {
+      $result_array[$emp_array[0]] = '';
+    }
+  }
+  // if payment fail then redirect back to checkout page.  
+  if ($result_array['successcode'] != '0') {
+    drupal_set_message(t('Payment is not successful. %message', array('%message' => $result_array['errMsg'])), 'error');
     watchdog('commerce_paydollar', 'Payment failed: %message', array('%message' => $data), WATCHDOG_WARNING);
     drupal_goto('checkout');
-  }else{
+  }
+  else{
     watchdog('commerce_paydollar', 'Payment success: %message', array('%message' => $data));
     return TRUE;  
   }
-  
 }
 
 /**
@@ -412,19 +420,17 @@ function commerce_paydollar_submit_form_submit($payment_method, $pane_form, $pan
 function commerce_paydollar_curlpost($url, $curlPost, $timeout = 30) {
   $ssl = substr($url, 0, 8) == "https://" ? TRUE : FALSE;
   $ch = curl_init();
-	
+
   curl_setopt($ch, CURLOPT_URL, $url);
   curl_setopt($ch, CURLOPT_HEADER, 0);
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
   curl_setopt($ch, CURLOPT_POST, 1);
   curl_setopt($ch, CURLOPT_POSTFIELDS, $curlPost);
   curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
- 
-  if($ssl) {
+  if ($ssl) {
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 1);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
   }
-	 
   $data = curl_exec($ch);
   curl_close($ch);
   return $data;
