@@ -249,24 +249,6 @@ function commerce_paydollar_settings_form($settings = NULL) {
 }
 
 /**
- *
- */
-function commerce_paydollar_settings_form_validate($form, &$form_state) {
-  // die('afaf');
-  
-}
-
-function commerce_paydollar_form_alter(&$form, &$form_state, $form_id) {
-  $form['#validate'] = '_fsfsd';
-  
-}
-
-function _fsfsd(){
-  
-  die('fdsfs');
-}
-
-/**
  * Payment method callback: submit form.
  */
 function commerce_paydollar_submit_form($payment_method, $pane_values, $checkout_pane, $order) {
