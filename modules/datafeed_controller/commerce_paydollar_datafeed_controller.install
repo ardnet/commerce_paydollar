@@ -1,0 +1,54 @@
+<?php
+/**
+ * @file
+ * Install functions for the paydollar datafeed controller module.
+ *
+ * Add database schema for the datafeed data.
+ */
+
+/**
+ * Implements hook_uninstall().
+ */
+function commerce_paydollar_datafeed_controller_uninstall() {
+  drupal_uninstall_schema('commerce_paydollar_datafeed');
+}
+
+/**
+ * Implements hook_schema().
+ */
+function commerce_paydollar_datafeed_controller_schema() {
+  $schema = array();
+  $schema['commerce_paydollar_datafeed'] = array(
+    'description' => 'The base table for PayDollar data feed.',
+    'fields' => array(
+      'feed_id' => array(
+        'description' => 'The primary identifier for the data feed.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'order_id' => array(
+        'description' => 'The {commerce_order}.order_id of the order the payment is for.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'created' => array(
+        'description' => 'The Unix timestamp when the data feed record was created.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'postdata' => array(
+        'description' => 'The posted back data of the data feed.',
+        'type' => 'blob',
+        'size' => 'big',
+        'not null' => TRUE,
+        'serialize' => TRUE,
+      ),
+    ),
+    'primary key' => array('feed_id'),
+  );
+  return $schema;
+}

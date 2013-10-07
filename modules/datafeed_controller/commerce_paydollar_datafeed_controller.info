@@ -1,0 +1,6 @@
+name = Commerce PayDollar Data Feed Controller
+description = Data feed controller for PayDollar payment services.
+package = Commerce (PayDollar)
+dependencies[] = commerce_paydollar
+configure = admin/commerce/config/payment-methods
+core = 7.x

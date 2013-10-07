@@ -1,0 +1,192 @@
+<?php
+/**
+ * @file
+ * Module for dealing with the PayDollar data feed information.
+ */
+
+/**
+ * Function to verify data feed.
+ */
+function commerce_paydollar_datafeed_controller_verify_payment_datafeed($src, $prc, $success_code, $merchant_reference_number, $paydollar_reference_number, $currency_code, $amount, $payer_authentication_status, $secure_hash_secret, $secure_hash) {
+  $verify_data = sha1($src . '|' . $prc . '|' . $success_code . '|' . $merchant_reference_number . '|'
+    . $paydollar_reference_number . '|' . $currency_code . '|' . $amount . '|'
+    . $payer_authentication_status . '|' . $secure_hash_secret);
+  return ($secure_hash == $verify_data);
+}
+
+/**
+ * Implements hook_commerce_commerce_checkout_pane_info().
+ */
+function commerce_paydollar_datafeed_controller_commerce_checkout_pane_info() {
+  $checkout_panes = array();
+
+  $checkout_panes['commerce_paydollar_process_datafeed'] = array(
+    'title' => t('Process Data Feed'),
+    'file' => 'commerce_paydollar_datafeed_controller.checkout_pane.inc',
+    'base' => 'commerce_paydollar_datafeed_controller_process_datafeed',
+    'page' => 'complete',
+    'fieldset' => FALSE,
+    'locked' => FALSE,
+    'review' => FALSE,
+  );
+
+  return $checkout_panes;
+}
+
+/**
+ * Implements hook_cron_queue_info().
+ */
+function commerce_paydollar_datafeed_controller_cron_queue_info() {
+  $queues['commerce_paydollar_datafeed_controller'] = array(
+    'worker callback' => 'commerce_paydollar_datafeed_controller_process_queue',
+    'time' => 60,
+  );
+  return $queues;
+}
+
+/**
+ * Implements hook_menu().
+ */
+function commerce_paydollar_datafeed_controller_menu() {
+  $items = array();
+  $items['paydollar/datafeed'] = array(
+    'title' => 'PayDollar Data Feed',
+    'page callback' => 'commerce_paydollar_datafeed_controller_datafeed_page',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  $items['paydollar/processqueue'] = array(
+    'title' => 'PayDollar Data Feed Queue Processs',
+    'page callback' => 'commerce_paydollar_datafeed_controller_process_page',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Page callback for the datafeed.
+ */
+function commerce_paydollar_datafeed_controller_datafeed_page() {
+  echo 'OK';
+  commerce_paydollar_datafeed_controller_queue_add_item($_POST);
+  watchdog('commerce_paydollar_datafeed_controller', 'Datafeed <pre>result is: @result</pre>', array('@result' => print_r($_POST, TRUE)), WATCHDOG_DEBUG);
+  exit;
+}
+
+
+/**
+ * Page callback for the queue process.
+ */
+function commerce_paydollar_datafeed_controller_process_page() {
+  commerce_paydollar_datafeed_controller_process_queue();
+  return "...";
+}
+
+/**
+ * Add item to Drupal Queue.
+ */
+function commerce_paydollar_datafeed_controller_queue_add_item($postdata = array()) {
+  $queue = DrupalQueue::get('PayDollarDataFeed', TRUE);
+  $order_id = '';
+  if (!empty($postdata['Ref'])) {
+    $order_id = $postdata['Ref'];
+  }
+  $data = array(
+    'order_id' => $order_id,
+    'timestamp' => REQUEST_TIME,
+    'postdata' => $postdata,
+  );
+  return $queue->createItem($data);
+}
+
+/**
+ * Get PayDollarDataFeed from Drupal Queue and process it.
+ */
+function commerce_paydollar_datafeed_controller_process_queue($order_id = NULL) {
+  $queue = DrupalQueue::get('PayDollarDataFeed', TRUE);
+  $process_all = TRUE;
+  if (!empty($order_id)) {
+    $process_all = FALSE;
+  }
+  // Pull items out one at a time.
+  while ($item = $queue->claimItem()) {
+    if ($process_all || $item->data['order_id'] == $order_id) {
+      if (commerce_paydollar_datafeed_controller_process_queue_item($item->data)) {
+        $queue->deleteItem($item);
+      }
+    }
+    else {
+      $queue->releaseItem($item);
+    }
+  }
+}
+
+/**
+ * Function to process items in the queue.
+ */
+function commerce_paydollar_datafeed_controller_process_queue_item($data = array()) {
+  if (empty($data)) {
+    return FALSE;
+  }
+  $order_id = $data['order_id'];
+  $timestamp = $data['timestamp'];
+  $postdata = $data['postdata'];
+
+  // Record the data feed.
+  $rec_data = array(
+    'order_id' => $order_id,
+    'created' => $timestamp,
+    'postdata' => $postdata,
+  );
+  if (drupal_write_record('commerce_paydollar_datafeed', $rec_data) === FALSE) {
+    watchdog('commerce_paydollar_datafeed_controller', 'Error writing data feed record.', NULL, WATCHDOG_ERROR, 'admin/commmerce/orders/' . $order_id);
+  }
+
+  $order = FALSE;
+  // Update the order status.
+  if ($postdata['Ref'] != 'TestDatafeed' && $postdata['successcode'] == '0') {
+    $order_status = 'completed';
+    // !! unload the order first.
+    entity_get_controller('commerce_order')->resetCache(array($order->order_id));
+    $order = commerce_order_load($order_id);
+    if ($order !== FALSE) {
+      commerce_order_status_update($order, $order_status, FALSE, TRUE, 'Order status updated by PayDollar data feed.');
+      // Immediately unload to make the order available to everyone again.
+      // Ref. http://drupal.org/node/1514618
+      entity_get_controller('commerce_order')->resetCache(array($order->order_id));
+    }
+  }
+
+  // Invoke related payment method datafeed callback.
+  commerce_paydollar_datafeed_controller_invoke_callback($order_id, $postdata);
+  return TRUE;
+}
+
+/**
+ * Invoke the payment method datafeed callback.
+ */
+function commerce_paydollar_datafeed_controller_invoke_callback($order_id, $postdata) {
+  $retval = FALSE;
+  $order = commerce_order_load($order_id);
+  entity_get_controller('commerce_order')->resetCache(array($order->order_id));
+  $payment_method = commerce_payment_method_instance_load($order->data['payment_method']);
+  // Include the payment method file if specified.
+  if (!empty($payment_method['file'])) {
+    $parts = explode('.', $payment_method['file']);
+    module_load_include(array_pop($parts), $payment_method['module'], implode('.', $parts));
+  }
+  // hook_paydollar_datafeed_callback($order_id, $postdata);
+  $callback = $payment_method['base'] . '_paydollar_datafeed_callback';
+  // If the specified callback function exists, return it.
+  if (function_exists($callback)) {
+    $retval = $callback($order_id, $postdata);
+    if ($retval == FALSE) {
+      return FALSE;
+    }
+  }
+  // Let other modules to re-act on data feed.
+  module_invoke_all('commerce_paydollar_datafeed_controller', $order_id, $postdata);
+  // Otherwise return FALSE.
+  return $retval;
+}

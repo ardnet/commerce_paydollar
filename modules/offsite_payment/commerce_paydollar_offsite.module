@@ -1,0 +1,521 @@
+<?php
+
+/**
+ * @file
+ * Implements PayDollar offsite payment services for use with Drupal Commerce.
+ * commerce_paydollar_offsite
+ */
+
+ // PayDollar transaction mode definitions.
+define('COMMERCE_PAYDOLLAR_OFFSITE_TXN_MODE_LIVE', 'live');
+define('COMMERCE_PAYDOLLAR_OFFSITE_TXN_MODE_TEST', 'test');
+
+// PayDollar URLs for live and test environments.
+define('COMMERCE_PAYDOLLAR_OFFSITE_SERVER_LIVE', 'https://www.paydollar.com/b2c2/eng/payment/payForm.jsp');
+define('COMMERCE_PAYDOLLAR_OFFSITE_SERVER_TEST', 'https://test.paydollar.com/b2cDemo/eng/payment/payForm.jsp');
+
+define('COMMERCE_PAYDOLLAR_OFFSITE_MERCHANT_TEST', 'https://test.paydollar.com/b2cDemo/eng/merchant/api/orderApi.jsp');
+define('COMMERCE_PAYDOLLAR_OFFSITE_MERCHANT_LIVE', 'https://www.paydollar.com/b2c2/eng/merchant/api/orderApi.jsp');
+
+/**
+ * Specify default settings for PayDollar API.
+ *
+ * @return array
+ *   An associative array of default settings for PayDollar API,
+ *    which contained:
+ *   - order_ref: Merchant's Order Reference Number.
+ *   - amount: The total amount to charge.
+ *   - curr_code: Currency payment.
+ *   - lang: Language payment type.
+ *   - merchant_id: Id of Merchant
+ *   - p_method: Payment card type.
+ *   - ep_month: Credit card expiry month.
+ *   - ep_year: Credit card expiry year.
+ *   - security_code: CVV number.
+ *   - card_holder: Card holder name.
+ *   - card_no: Credit card number.
+ *   - pay_type: Payment type.
+ *   - remark: Additional remark.
+ *   - ori_country: Origin country code.
+ *   - dest_country: Destination country code.
+ *   - is_secure_hash_setting: is transaction using Secure Hash?
+ *   - secure_hash_secret: Secret Hash from PayDollar API.
+ *   - is_3d: if transaction using 3D Transaction.
+ *   - transact_mode: Transaction mode (for this module purpose only).
+ */
+function commerce_paydollar_offsite_default_settings() {
+  return array(
+    'order_ref' => '',
+    'amount' => '',
+    'curr_code' => '',
+    'lang' => 'E',
+    'merchant_id' => '',
+    'p_method' => '',
+    'ep_month' => '',
+    'ep_year' => '',
+    'security_code' => '',
+    'card_holder' => '',
+    'card_no' => '',
+    'pay_type' => 'N',
+    'remark' => 'remark',
+    'ori_country' => '',
+    'dest_country' => '',
+    'is_secure_hash_setting' => TRUE,
+    'secure_hash_secret' => '',
+    'is_3d' => FALSE,
+    'transact_mode' => COMMERCE_PAYDOLLAR_OFFSITE_TXN_MODE_TEST,
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function commerce_paydollar_offsite_menu() {
+  $items = array();
+
+  $items['commerce-paydollar-offsite/success'] = array(
+    'page callback' => 'commerce_paydollar_offsite_success',
+    'access arguments' => array('access content'),
+  );
+
+  $items['commerce-paydollar-offsite/cancel'] = array(
+    'page callback' => 'commerce_paydollar_offsite_cancel',
+    'access arguments' => array('access content'),
+  );
+
+  $items['commerce-paydollar-offsite/fail'] = array(
+    'page callback' => 'commerce_paydollar_offsite_fail',
+    'access arguments' => array('access content'),
+  );
+
+  return $items;
+}
+
+/**
+ * Success URL.
+ */
+function commerce_paydollar_offsite_success() {
+  watchdog('commerce_paydollar_offsite', 'Payment gateway has succeeded with following details: <pre>$_REQUEST: @result</pre>',
+    array('@result' => print_r($_REQUEST, TRUE)), WATCHDOG_DEBUG);
+  $order_id = $_REQUEST['Ref'];
+  $order = FALSE;
+  if (!empty($order_id) && is_numeric($order_id)) {
+    $order = commerce_order_load($order_id);
+  }
+  if ($order !== FALSE) {
+    if (strncmp($order->status, 'checkout_', 9) == 0) {
+      // If it is still in checkout.
+      commerce_order_status_update($order, 'checkout_complete');
+    }
+    // Immediately unload to make the order available to everyone again.
+    // Ref. http://drupal.org/node/1514618
+    entity_get_controller('commerce_order')->resetCache(array($order->order_id));
+    commerce_checkout_complete($order);
+    drupal_goto('checkout/' . $order_id);
+  }
+  else {
+    drupal_goto('<front>');
+  }
+  return '';
+}
+
+/**
+ * Helper function to get the last checkout order of current user.
+ */
+function _commerce_paydollar_offsite_get_last_checkout_order($uid = NULL) {
+  if ($uid === NULL) {
+    global $user;
+    $uid = $user->uid;
+  }
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'commerce_order')
+    ->propertyCondition('status', 'checkout_', 'STARTS_WITH')
+    ->propertyCondition('status', 'checkout_complete', '!=')
+    ->propertyCondition('uid', $uid)
+    ->propertyOrderBy('changed', 'DESC')
+    ->range(0, 1);
+  $result = $query->execute();
+  if (isset($result['commerce_order'])) {
+    $order_ids = array_keys($result['commerce_order']);
+    return array_shift($order_ids);
+  }
+  return NULL;
+}
+
+
+/**
+ * Cancel URL.
+ */
+function commerce_paydollar_offsite_cancel() {
+  watchdog('commerce_paydollar_offsite', 'Payment gateway has got cancelled with following details: <pre>$_REQUEST: @result</pre>',
+    array('@result' => print_r($_REQUEST, TRUE)), WATCHDOG_DEBUG);
+  drupal_set_message(t('Payment has been canceled.'), 'error');
+  $order_id = $_REQUEST['Ref'];
+  if (empty($order_id)) {
+    // Try to get the latest order being checkout.
+    $order_id = _commerce_paydollar_offsite_get_last_checkout_order();
+  }
+  $order = FALSE;
+  if (!empty($order_id) && is_numeric($order_id)) {
+    $order = commerce_order_load($order_id);
+  }
+  if ($order !== FALSE) {
+    commerce_order_status_update($order, 'checkout_checkout');
+    // Immediately unload to make the order available to everyone again.
+    // Ref. http://drupal.org/node/1514618
+    entity_get_controller('commerce_order')->resetCache(array($order->order_id));
+    drupal_goto('checkout/' . $order_id);
+  }
+  else {
+    drupal_goto('<front>');
+  }
+  return '';
+}
+
+/**
+ * Fail URL.
+ */
+function commerce_paydollar_offsite_fail() {
+  watchdog('commerce_paydollar_offsite', 'Payment gateway has failed with following details: <pre>$_REQUEST: @result</pre>',
+    array('@result' => print_r($_REQUEST, TRUE)), WATCHDOG_DEBUG);
+  drupal_set_message(t('Payment has been failed.'), 'error');
+  $order_id = $_REQUEST['Ref'];
+  if (empty($order_id)) {
+    // Try to get the latest order being checkout.
+    $order_id = _commerce_paydollar_offsite_get_last_checkout_order();
+  }
+  $order = FALSE;
+  if (!empty($order_id) && is_numeric($order_id)) {
+    $order = commerce_order_load($order_id);
+  }
+  if ($order !== FALSE) {
+    commerce_order_status_update($order, 'checkout_review');
+    // Immediately unload to make the order available to everyone again.
+    // Ref. http://drupal.org/node/1514618
+    entity_get_controller('commerce_order')->resetCache(array($order->order_id));
+    drupal_goto('checkout/' . $order_id . '/review');
+  }
+  else {
+    drupal_goto('<front>');
+  }
+  return '';
+}
+
+/**
+ * Implements hook_commerce_payment_method_info().
+ */
+function commerce_paydollar_offsite_commerce_payment_method_info() {
+  $payment_methods = array();
+  $payment_methods['commerce_paydollar_offsite'] = array(
+    'base' => 'commerce_paydollar_offsite',
+    'title' => t('PayDollar Offsite Payment'),
+    'short_title' => t('PayDollar Offsite'),
+    'display_title' => t('PayDollar (Off-site payment)'),
+    'description' => t('Integration with PayDollar offsite payment.'),
+    'offsite' => TRUE,
+    'offsite_autoredirect' => TRUE,
+  );
+  return $payment_methods;
+}
+
+
+/**
+ * Settings form for PayDollar API payment method.
+ *
+ * Used to set merchant id.
+ */
+function commerce_paydollar_offsite_settings_form($settings = NULL) {
+  include_once drupal_get_path('module', 'commerce_paydollar') . '/commerce_paydollar.module';
+
+  $form = array();
+  // Merge default settings into the stored settings array.
+  $settings = (array) $settings + commerce_paydollar_offsite_default_settings();
+
+  $form['merchant_id'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Merchant ID'),
+    '#description' => t('This is the merchant ID that PayDollar sent you when you set up your account.'),
+    '#default_value' => $settings['merchant_id'],
+    '#required' => TRUE,
+  );
+  $form['transact_mode'] = array(
+    '#type' => 'radios',
+    '#title' => t('Transaction mode'),
+    '#description' => t('Adjust to live transactions when you are ready to start processing actual payments.'),
+    '#options' => array(
+      COMMERCE_PAYDOLLAR_OFFSITE_TXN_MODE_LIVE => t('Live transactions in a live account'),
+      COMMERCE_PAYDOLLAR_OFFSITE_TXN_MODE_TEST => t('Test transactions in a test account'),
+    ),
+    '#default_value' => $settings['transact_mode'],
+  );
+  $form['secure_hash_secret'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Secure hash secret'),
+    '#description' => t('provided by PayDollar.'),
+    '#default_value' => $settings['secure_hash_secret'],
+    '#required' => TRUE,
+  );
+
+  $form['lang'] = array(
+    '#type' => 'select',
+    '#title' => t('The language of the payment type.'),
+    '#description' => t('Select your currency.'),
+    '#options' => array(
+      'C' => t('Traditional Chinese'),
+      'E' => t('English'),
+      'X' => t('Simplified Chinese'),
+      'K' => t('Korean'),
+      'J' => t('Japanese'),
+      'T' => t('Thai'),
+    ),
+    '#default_value' => $settings['lang'],
+  );
+  $form['curr_code'] = array(
+    '#type' => 'select',
+    '#title' => t('Currency Payment'),
+    '#description' => t('Select your currency.'),
+    '#options' => array(
+      344 => t('HKD'), 840 => t('USD'), 702 => t('SGD'),
+      156 => t('CNY'), 392 => t('JPY'), 901 => t('TWD'),
+      036 => t('AUD'), 978 => t('EUR'), 826 => t('GPB'),
+      124 => t('CAD'), 446 => t('MOP'), 608 => t('PHP'),
+      764 => t('THB'), 458 => t('MYR'), 360 => t('IDR'),
+      410 => t('KRW'), 682 => t('SAR'), 554 => t('NZD'),
+      784 => t('AED'), 096 => t('BND'),
+    ),
+    '#default_value' => $settings['curr_code'],
+  );
+  $form['pay_type'] = array(
+    '#type' => 'select',
+    '#title' => t('Payment Type'),
+    '#description' => t('Select your payment type.'),
+    '#options' => array(
+      'N' => t('Normal Payment (Sales)'),
+      'H' => t('Hold Payment (Authorize only)'),
+    ),
+    '#default_value' => $settings['pay_type'],
+  );
+  return $form;
+}
+
+/**
+ * Payment method callback: adds a message and CSS to the submission form.
+ */
+function commerce_paydollar_offsite_submit_form($payment_method, $pane_values, $checkout_pane, $order) {
+  $form['paypal_wps_information'] = array(
+    '#markup' => '<span class="commerce-paydollar-wps-info">' . t('(Continue with checkout to complete payment via PayDollar.)') . '</span>',
+  );
+  return $form;
+}
+
+/**
+ * Payment method callback: redirect form.
+ */
+function commerce_paydollar_offsite_redirect_form($form, &$form_state, $order, $payment_method) {
+  return commerce_paydollar_offsite_order_form($form, $form_state, $order, $payment_method['settings']);
+}
+
+/**
+ * Payment method order form.
+ */
+function commerce_paydollar_offsite_order_form($form, &$form_state, $order, $settings) {
+  module_load_include('inc', 'commerce_paydollar', 'includes/sha_paydollar_secure');
+
+  $order_ref = $order->order_id;
+
+  $wrapper = entity_metadata_wrapper('commerce_order', $order);
+  $amount = $wrapper->commerce_order_total->amount->value();
+  $amount = sprintf(commerce_currency_amount_to_decimal($amount, 'HKD'));
+
+  $curr_code = $settings['curr_code'];
+  $lang = $settings['lang'];
+  $merchant_id = $settings['merchant_id'];
+  // $remark = $settings['remark'];
+  $pay_type = $settings['pay_type'];
+
+  // Additional parameter.
+  $mps_mode = 'NIL';
+  // Set the default to ALL.
+  $pay_method = 'ALL';
+
+  $success_url = url('commerce-paydollar-offsite/success', array('absolute' => TRUE));
+  $fail_url = url('commerce-paydollar-offsite/fail', array('absolute' => TRUE));
+  $cancel_url = url('commerce-paydollar-offsite/cancel', array('absolute' => TRUE));
+
+  $secure_hash_secret = $settings['secure_hash_secret'];
+  $secure_hash = commerce_paydollar_generate_payment_secure_hash($merchant_id, $order_ref, $curr_code, $amount, $pay_type, $secure_hash_secret);
+
+  $data = array(
+    'merchantId' => $merchant_id,
+    'amount' => $amount,
+    'orderRef' => $order_ref,
+    'currCode' => $curr_code,
+    'successUrl' => $success_url,
+    'failUrl' => $fail_url,
+    'cancelUrl' => $cancel_url,
+    'payType' => $pay_type,
+    'lang' => $lang,
+    'mpsMode' => $mps_mode,
+    'payMethod' => $pay_method,
+    'secureHash' => $secure_hash,
+    'remark' => '',
+    'redirect' => '',
+    'oriCountry' => '',
+    'destCountry' => '',
+  );
+
+  $form['#action'] = ($settings['transact_mode'] == COMMERCE_PAYDOLLAR_OFFSITE_TXN_MODE_LIVE) ? COMMERCE_PAYDOLLAR_OFFSITE_SERVER_LIVE : COMMERCE_PAYDOLLAR_OFFSITE_SERVER_TEST;
+  foreach ($data as $name => $value) {
+    if (!empty($value)) {
+      $form[$name] = array('#type' => 'hidden', '#value' => $value);
+    }
+  }
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Proceed to PayDollar'),
+  );
+  return $form;
+}
+
+/**
+ * Implements hook_commerce_paydollar_datafeed_controller().
+ */
+function commerce_paydollar_offsite_paydollar_datafeed_callback($order_id, $postdata) {
+  $order = commerce_order_load($order_id);
+  if ($order !== FALSE) {
+    // Immediately unload to make the order available to everyone again.
+    // Ref. http://drupal.org/node/1514618
+    entity_get_controller('commerce_order')->resetCache(array($order->order_id));
+    $payment_method = commerce_payment_method_instance_load($order->data['payment_method']);
+
+    $status = COMMERCE_PAYMENT_STATUS_FAILURE;
+    switch ($postdata['successcode']) {
+      case '0':
+        $status = COMMERCE_PAYMENT_STATUS_SUCCESS;
+        break;
+
+      default:
+        $status = COMMERCE_PAYMENT_STATUS_FAILURE;
+        break;
+    }
+    $amount = $postdata['Amt'];
+    $currency = $postdata['Cur'];
+    switch ($currency) {
+      case '344':
+        $currency_code = 'HKD';
+        break;
+
+      case '840':
+        $currency_code = 'USD';
+        break;
+
+      case '702':
+        $currency_code = 'SGD';
+        break;
+
+      case '156':
+        $currency_code = 'CNY';
+        break;
+
+      case '392':
+        $currency_code = 'JPY';
+        break;
+
+      case '901':
+        $currency_code = 'TWD';
+        break;
+
+      case '036':
+        $currency_code = 'AUD';
+        break;
+
+      case '978':
+        $currency_code = 'EUR';
+        break;
+
+      case '826':
+        $currency_code = 'GBP';
+        break;
+
+      case '124':
+        $currency_code = 'CAD';
+        break;
+
+      case '446':
+        $currency_code = 'MOP';
+        break;
+
+      case '608':
+        $currency_code = 'PHP';
+        break;
+
+      case '764':
+        $currency_code = 'THB';
+        break;
+
+      case '458':
+        $currency_code = 'MYR';
+        break;
+
+      case '360':
+        $currency_code = 'IDR';
+        break;
+
+      case '410':
+        $currency_code = 'KRW';
+        break;
+
+      case '682':
+        $currency_code = 'SAR';
+        break;
+
+      case '554':
+        $currency_code = 'NZD';
+        break;
+
+      case '784':
+        $currency_code = 'AED';
+        break;
+
+      case '096':
+        $currency_code = 'BND';
+        break;
+
+      default:
+        watchdog('commerce_paydollar_offsite', 'Unknown currency code from data feed record.', NULL, WATCHDOG_ERROR, 'admin/commmerce/orders/' . $order_id);
+        break;
+    }
+    $charge = array(
+      'amount' => intval($amount) * 100,
+      'currency_code' => $currency_code,
+    );
+    commerce_paydollar_offsite_transaction($payment_method, $order, $charge, $postdata['Holder'],
+      $status, $postdata['PayRef']);
+  }
+}
+
+/**
+ * Creates an paydollar payment transaction for the specified charge amount.
+ *
+ * @param object $payment_method
+ *   The payment method instance object used to charge this payment.
+ * @param object $order
+ *   The order object the payment applies to.
+ * @param array $charge
+ *   An array indicating the amount and currency code to charge.
+ * @param string $name
+ *   The name entered on the submission form.
+ */
+function commerce_paydollar_offsite_transaction($payment_method, $order, $charge, $name, $status, $remote_id = NULL, $remote_status = '') {
+  $transaction = commerce_payment_transaction_new('commerce_paydollar_offsite', $order->order_id);
+  $transaction->instance_id = $payment_method['instance_id'];
+  $transaction->amount = $charge['amount'];
+  $transaction->currency_code = $charge['currency_code'];
+  $transaction->status = $status;
+  $transaction->message = 'Name: @name';
+  $transaction->message_variables = array('@name' => $name);
+  $transaction->remote_id = $remote_id;
+  $transaction->remote_status = $remote_status;
+  commerce_payment_transaction_save($transaction);
+}

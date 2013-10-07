@@ -1,0 +1,6 @@
+name = Commerce PayDollar Offsite Payment
+description = Implements PayDollar offsite payment services for use with Drupal Commerce.
+package = Commerce (PayDollar)
+dependencies[] = commerce_paydollar
+configure = admin/commerce/config/payment-methods
+core = 7.x

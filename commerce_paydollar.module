@@ -2,23 +2,23 @@
 
 /**
  * @file
- * 
  * Provide a PayDollar API payment method for Drupal Commerce.
  */
 
 // PayDollar transaction mode definitions.
-define('PAYDOLLAR_TXN_MODE_LIVE', 'live');
-define('PAYDOLLAR_TXN_MODE_TEST', 'test');
+define('COMMERCE_PAYDOLLAR_TXN_MODE_LIVE', 'live');
+define('COMMERCE_PAYDOLLAR_TXN_MODE_TEST', 'test');
 
 // PayDollar URLs for live and test environments.
-define('PAYDOLLAR_SERVER_LIVE', 'https://www.paydollar.com/b2c2/eng/directPay/payComp.jsp');
-define('PAYDOLLAR_SERVER_TEST', 'https://test.paydollar.com/b2cDemo/eng/directPay/payComp.jsp');
+define('COMMERCE_PAYDOLLAR_SERVER_LIVE', 'https://www.paydollar.com/b2c2/eng/directPay/payComp.jsp');
+define('COMMERCE_PAYDOLLAR_SERVER_TEST', 'https://test.paydollar.com/b2cDemo/eng/directPay/payComp.jsp');
 
 /**
  * Specify default settings for PayDollar API.
  *
- * @return
- *   An associative array of default settings for PayDollar API, which contained:
+ * @return array
+ *   An associative array of default settings for PayDollar API,
+ *   which contained:
  *   - order_ref: Merchant's Order Reference Number.
  *   - amount: The total amount to charge.
  *   - curr_code: Currency payment.
@@ -41,26 +41,33 @@ define('PAYDOLLAR_SERVER_TEST', 'https://test.paydollar.com/b2cDemo/eng/directPa
  */
 function commerce_paydollar_default_settings() {
   return array(
-    'order_ref' => '', 
-    'amount' => '', 
-    'curr_code' => '', 
-    'lang' => 'E', 
-    'merchant_id' => '', 
-    'p_method' => '', 
-    'ep_month' => '', 
-    'ep_year' => '', 
-    'security_code' => '', 
-    'card_holder' => '', 
-    'card_no' => '', 
-    'pay_type' => 'N', 
-    'remark' => 'remark', 
-    'ori_country' => '', 
-    'dest_country' => '', 
-    'is_secure_hash_setting' => TRUE, 
-    'secure_hash_secret' => '', 
-    'is_3d' => FALSE, 
-    'transact_mode' => PAYDOLLAR_TXN_MODE_TEST, 
+    'order_ref' => '',
+    'amount' => '',
+    'curr_code' => '',
+    'lang' => 'E',
+    'merchant_id' => '',
+    'p_method' => '',
+    'ep_month' => '',
+    'ep_year' => '',
+    'security_code' => '',
+    'card_holder' => '',
+    'card_no' => '',
+    'pay_type' => 'N',
+    'remark' => 'remark',
+    'ori_country' => '',
+    'dest_country' => '',
+    'is_secure_hash_setting' => TRUE,
+    'secure_hash_secret' => '',
+    'is_3d' => FALSE,
+    'transact_mode' => COMMERCE_PAYDOLLAR_TXN_MODE_TEST,
   );
+}
+
+/**
+ * Function to generate the secure hash for PayDollar.
+ */
+function commerce_paydollar_generate_payment_secure_hash($merchant_id, $merchant_reference_number, $currency_code, $amount, $payment_type, $secure_hash_secret) {
+  return (sha1($merchant_id . '|' . $merchant_reference_number . '|' . $currency_code . '|' . $amount . '|' . $payment_type . '|' . $secure_hash_secret));
 }
 
 /**
@@ -71,8 +78,8 @@ function commerce_paydollar_cc_type($cc_type) {
     'visa' => 'VISA',
     'mastercard' => 'Master',
     'amex' => 'AMEX',
-    'dc' => 'Diners',
-    'jcb' => 'JCB',
+    // 'dc' => 'Diners',
+    // 'jcb' => 'JCB',
   );
   return $cc_kind[$cc_type];
 }
@@ -83,17 +90,19 @@ function commerce_paydollar_cc_type($cc_type) {
 function commerce_paydollar_commerce_payment_method_info() {
   $payment_methods = array();
   $payment_methods['commerce_paydollar'] = array(
+    'base' => 'commerce_paydollar',
     'title' => t('PayDollar'),
     'short_title' => t('PayDollar'),
     'display_title' => t('PayDollar'),
     'description' => t('Integration with PayDollar API.'),
-    'active' => TRUE
+    'active' => TRUE,
   );
   return $payment_methods;
 }
 
 /**
  * Settings form for PayDollar API payment method.
+ *
  * Used to set merchant id.
  */
 function commerce_paydollar_settings_form($settings = NULL) {
@@ -113,8 +122,8 @@ function commerce_paydollar_settings_form($settings = NULL) {
     '#title' => t('Transaction mode'),
     '#description' => t('Adjust to live transactions when you are ready to start processing actual payments.'),
     '#options' => array(
-      PAYDOLLAR_TXN_MODE_LIVE => t('Live transactions in a live account'),
-      PAYDOLLAR_TXN_MODE_TEST => t('Test transactions in a test account'),
+      COMMERCE_PAYDOLLAR_TXN_MODE_LIVE => t('Live transactions in a live account'),
+      COMMERCE_PAYDOLLAR_TXN_MODE_TEST => t('Test transactions in a test account'),
     ),
     '#default_value' => $settings['transact_mode'],
   );
@@ -125,7 +134,7 @@ function commerce_paydollar_settings_form($settings = NULL) {
     '#default_value' => $settings['secure_hash_secret'],
     '#required' => TRUE,
   );
-  
+
   $form['lang'] = array(
     '#type' => 'select',
     '#title' => t('The language of the payment type.'),
@@ -155,20 +164,7 @@ function commerce_paydollar_settings_form($settings = NULL) {
     ),
     '#default_value' => $settings['curr_code'],
   );
-  $form['lang'] = array(
-    '#type' => 'select',
-    '#title' => t('The language of the payment type.'),
-    '#description' => t('Select your currency.'),
-    '#options' => array(
-      'C' => t('Traditional Chinese'),
-      'E' => t('English'),
-      'X' => t('Simplified Chinese'),
-      'K' => t('Korean'),
-      'J' => t('Japanese'),
-      'T' => t('Thai'),
-    ),
-    '#default_value' => $settings['lang'],
-  );
+
   $form['pay_type'] = array(
     '#type' => 'select',
     '#title' => t('Payment Type'),
@@ -177,7 +173,7 @@ function commerce_paydollar_settings_form($settings = NULL) {
       'N' => t('Normal Payment (Sales)'),
       'H' => t('Hold Payment (Authorize only)'),
     ),
-    '#default_value' => $settings['pay_type'],                          
+    '#default_value' => $settings['pay_type'],
   );
   return $form;
 }
@@ -192,14 +188,15 @@ function commerce_paydollar_submit_form($payment_method, $pane_values, $checkout
       'visa',
       'mastercard',
       'amex',
-      'jcb',
-      'dc',
+      // 'jcb',
+      // 'dc',
     ),
     'number' => '',
     'code' => '',
     'owner' => '',
   );
-  return commerce_payment_credit_card_form($credit_card_settings);
+  $form = commerce_payment_credit_card_form($credit_card_settings);
+  return $form;
 }
 
 /**
@@ -211,7 +208,7 @@ function commerce_paydollar_submit_form_validate($payment_method, $pane_form, $p
   $settings = array(
     'form_parents' => array_merge($form_parents, array('credit_card')),
   );
-  
+
   if (!commerce_payment_credit_card_validate($pane_values['credit_card'], $settings)) {
     return FALSE;
   }
@@ -221,32 +218,32 @@ function commerce_paydollar_submit_form_validate($payment_method, $pane_form, $p
  * Payment method callback: submit form submission.
  */
 function commerce_paydollar_submit_form_submit($payment_method, $pane_form, $pane_values, $order, $charge) {
+  // Unload the order to release the DB lock.
+  // Ref. http://drupal.org/node/1514618
+  entity_get_controller('commerce_order')->resetCache(array($order->order_id));
   module_load_include('inc', 'commerce_paydollar', 'includes/sha_paydollar_secure');
-  
-  // grab some settings from default setting.
+
+  // Grab some settings from default setting.
   $default_setting = commerce_paydollar_default_settings();
-  
-  $order_ref = $order->order_id; 
-  $amount = sprintf(commerce_currency_amount_to_decimal($charge['amount'], $charge['currency_code'])); 
-  $curr_code = $payment_method['settings']['curr_code']; 
-  $lang = $payment_method['settings']['lang']; 
-  $merchant_id = $payment_method['settings']['merchant_id']; 
+
+  $order_ref = $order->order_id;
+  $amount = sprintf(commerce_currency_amount_to_decimal($charge['amount'], $charge['currency_code']));
+  $curr_code = $payment_method['settings']['curr_code'];
+  $lang = $payment_method['settings']['lang'];
+  $merchant_id = $payment_method['settings']['merchant_id'];
   $card_no = $pane_values['credit_card']['number'];
   $p_method = commerce_paydollar_cc_type($pane_values['credit_card']['type']);
-  $ep_month = $pane_values['credit_card']['exp_month']; 
-  $ep_year = $pane_values['credit_card']['exp_year']; 
-  $security_code = $pane_values['credit_card']['code']; 
-  $card_holder = $pane_values['credit_card']['owner']; 
-  $pay_type = $default_setting['pay_type']; 
-  $remark = $default_setting['remark']; 
-  $ori_country = $default_setting['ori_country']; 
-  $dest_country = $default_setting['dest_country']; 
-  
+  $ep_month = $pane_values['credit_card']['exp_month'];
+  $ep_year = $pane_values['credit_card']['exp_year'];
+  $security_code = $pane_values['credit_card']['code'];
+  $card_holder = $pane_values['credit_card']['owner'];
+  $pay_type = $default_setting['pay_type'];
+  $remark = $default_setting['remark'];
+
   // Generate the secure hash.
-  $secure_hash_secret = $payment_method['settings']['secure_hash_secret']; 
-  $paydollar_secure = new SHAPaydollarSecure(); 
-  $secure_hash = $paydollar_secure->generatePaymentSecureHash($merchant_id, $order_ref, $curr_code, $amount, $pay_type, $secure_hash_secret);
-  $server_url = ($payment_method['settings']['transact_mode'] == PAYDOLLAR_TXN_MODE_LIVE) ? PAYDOLLAR_SERVER_LIVE : PAYDOLLAR_SERVER_TEST;
+  $secure_hash_secret = $payment_method['settings']['secure_hash_secret'];
+  $secure_hash = commerce_paydollar_generate_payment_secure_hash($merchant_id, $order_ref, $curr_code, $amount, $pay_type, $secure_hash_secret);
+  $server_url = ($payment_method['settings']['transact_mode'] == COMMERCE_PAYDOLLAR_TXN_MODE_LIVE) ? COMMERCE_PAYDOLLAR_SERVER_LIVE : COMMERCE_PAYDOLLAR_SERVER_TEST;
 
   // Generate data POST for form submission.
   $post_data = 'lang=' . urlencode($lang) . '&merchantId=' . urlencode($merchant_id);
@@ -257,57 +254,70 @@ function commerce_paydollar_submit_form_submit($payment_method, $pane_form, $pan
   $post_data .= '&epMonth=' . urlencode($ep_month) . '&epYear=' . urlencode($ep_year);
   $post_data .= '&cardHolder=' . urlencode($card_holder);
 
-  // if Secure Hash is used
+  // If Secure Hash is used.
   if ($default_setting['is_secure_hash_setting']) {
     $post_data .= '&secureHash=' . urlencode($secure_hash);
-  }   
-  
-  // post data to Paydollar System,and get the result
-  $data = commerce_paydollar_curlpost($server_url, $post_data);
-  // get the respond message from PayDollar server.
-  $result = explode('&', $data);
-  $result_array = array();
-  foreach ($result as $key => $value) {
-    $emp_array = explode('=', $value);
-    $length = count($emp_array);
-    if ($length == 2) {
-      $result_array[$emp_array[0]] = $emp_array[1];
+  }
+
+  // Post data to Paydollar System,and get the result.
+  $ch = curl_init();
+  curl_setopt($ch, CURLOPT_URL, $server_url);
+  curl_setopt($ch, CURLOPT_POST, 1);
+  curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
+  // CURLOPT_SSL_VERIFYPEER should always be enabled for security reason.
+  // Ref: https://drupal.org/node/1931758
+  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 1);
+  // Receive server response ...
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+  $server_output = curl_exec($ch);
+  curl_close($ch);
+
+  watchdog('commerce_paydollar', 'Payment status <pre>data: @data</pre>', array('@data' => print_r($server_output, TRUE)), WATCHDOG_DEBUG);
+  // We should wait until the datafeed to check if the payment is complete.
+  // commerce_checkout_complete($order);
+  if ($server_output === FALSE) {
+    form_set_error('commerce_payment', t('Error connecting to payment gateway.'));
+    commerce_paydollar_transaction($payment_method, $order, $charge, $pane_values['credit_card']['owner'], COMMERCE_PAYMENT_STATUS_FAILURE);
+    return FALSE;
+  }
+  $paydollar_response = array();
+  parse_str($server_output, $paydollar_response);
+  if ($paydollar_response['successcode'] != '0') {
+    $err_msg = t('Error from payment gateway: ') . $paydollar_response['errMsg'];
+    if (!empty($paydollar_response['PayRef'])) {
+      $err_msg .= '(REF:' . $paydollar_response['PayRef'] . ')';
     }
-    if ($length == 1) {
-      $result_array[$emp_array[0]] = '';
-    }
+    form_set_error('commerce_payment', $err_msg);
+    commerce_paydollar_transaction($payment_method, $order, $charge, $pane_values['credit_card']['owner'],
+      COMMERCE_PAYMENT_STATUS_FAILURE, $paydollar_response['PayRef'], $paydollar_response['errMsg']);
+    return FALSE;
   }
-  // if payment fail then redirect back to checkout page.  
-  if ($result_array['successcode'] != '0') {
-    drupal_set_message(t('Payment is not successful. %message', array('%message' => $result_array['errMsg'])), 'error');
-    watchdog('commerce_paydollar', 'Payment failed: %message', array('%message' => $data), WATCHDOG_WARNING);
-    drupal_goto('checkout');
-  }
-  else{
-    watchdog('commerce_paydollar', 'Payment success: %message', array('%message' => $data));
-    return TRUE;  
-  }
+  // Save the payment transaction.
+  commerce_paydollar_transaction($payment_method, $order, $charge, $pane_values['credit_card']['owner'],
+    COMMERCE_PAYMENT_STATUS_SUCCESS, $paydollar_response['PayRef'], $paydollar_response['errMsg']);
 }
 
 /**
- * Define function for POST by using curl.
+ * Creates an paydollar payment transaction for the specified charge amount.
+ *
+ * @param object $payment_method
+ *   The payment method instance object used to charge this payment.
+ * @param object $order
+ *   The order object the payment applies to.
+ * @param array $charge
+ *   An array indicating the amount and currency code to charge.
+ * @param string $name
+ *   The name entered on the submission form.
  */
-function commerce_paydollar_curlpost($url, $curlPost, $timeout = 30) {
-  $ssl = substr($url, 0, 8) == "https://" ? TRUE : FALSE;
-  $ch = curl_init();
-
-  curl_setopt($ch, CURLOPT_URL, $url);
-  curl_setopt($ch, CURLOPT_HEADER, 0);
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-  curl_setopt($ch, CURLOPT_POST, 1);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, $curlPost);
-  curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
-  if ($ssl) {
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 1);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-  }
-  $data = curl_exec($ch);
-  curl_close($ch);
-  return $data;
+function commerce_paydollar_transaction($payment_method, $order, $charge, $name, $status, $remote_id = NULL, $remote_status = '') {
+  $transaction = commerce_payment_transaction_new('commerce_paydollar', $order->order_id);
+  $transaction->instance_id = $payment_method['instance_id'];
+  $transaction->amount = $charge['amount'];
+  $transaction->currency_code = $charge['currency_code'];
+  $transaction->status = $status;
+  $transaction->message = 'Name: @name';
+  $transaction->message_variables = array('@name' => $name);
+  $transaction->remote_id = $remote_id;
+  $transaction->remote_status = $remote_status;
+  commerce_payment_transaction_save($transaction);
 }
-

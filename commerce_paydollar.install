@@ -1,0 +1,34 @@
+<?php
+/**
+ * @file
+ * Ensures users have cURL enabled prior to installation.
+ */
+
+/**
+ * Implements hook_requirements().
+ */
+function commerce_paydollar_requirements($phase) {
+  // Skip the requirements check if SimpleTest or Commerce PayPal WPP
+  // is installed to avoid multiple cURL rows.
+  if (module_exists('simpletest') || module_exists('commerce_paypal_wpp')) {
+    return;
+  }
+
+  $t = get_t();
+
+  $has_curl = function_exists('curl_init');
+
+  $requirements['commerce_paydollar_curl'] = array(
+    'title' => $t('cURL'),
+    'value' => $has_curl ? $t('Enabled') : $t('Not found'),
+  );
+
+  if (!$has_curl) {
+    $requirements['commerce_paydollar_curl'] += array(
+      'severity' => REQUIREMENT_ERROR,
+      'description' => $t("Commerce PayDollar requires the PHP <a href='!curl_url'>cURL</a> library.", array('!curl_url' => 'http://php.net/manual/en/curl.setup.php')),
+    );
+  }
+
+  return $requirements;
+}
